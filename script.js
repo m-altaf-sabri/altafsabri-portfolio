@@ -1,108 +1,498 @@
-// Set this to your form endpoint (Cloudflare Worker, Formspree, etc.). Leave empty to open the visitor's email app instead.
-const FORM_ENDPOINT = '';
-const FALLBACK_EMAIL = 'mohdaltafsabri@gmail.com';
 
-const root = document.documentElement;
-const themeBtn = document.getElementById('themeToggle');
-const menuBtn = document.getElementById('menu');
-const navLinks = document.getElementById('navLinks');
+document.addEventListener("DOMContentLoaded", () => {
+    // ==========================================
+    // 1. DARK / LIGHT MODE TOGGLE
+    // ==========================================
 
-// Theme
-function setTheme(t) {
-    root.dataset.theme = t;
-    themeBtn.textContent = t === 'dark' ? 'Light' : 'Dark';
-    themeBtn.setAttribute('aria-label', `Switch to ${t === 'dark' ? 'light' : 'dark'} theme`);
-    try { localStorage.setItem('theme', t); } catch { }
-}
-let saved = null;
-try { saved = localStorage.getItem('theme'); } catch { }
-setTheme(saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
-themeBtn.addEventListener('click', () => setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark'));
+    const themeToggle = document.getElementById("themeToggle");
+    const root = document.documentElement;
 
-// Mobile menu
-menuBtn.addEventListener('click', () => {
-    const open = navLinks.classList.toggle('open');
-    menuBtn.setAttribute('aria-expanded', open);
-});
-navLinks.addEventListener('click', e => {
-    if (e.target.tagName === 'A') { navLinks.classList.remove('open'); menuBtn.setAttribute('aria-expanded', false); }
-});
+    function applyTheme(theme) {
+        const isDark = theme === "dark";
 
-// Mark JS as running (enables reveal styles)
-document.documentElement.classList.add('js');
-const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        // Match the CSS selector: :root[data-theme="dark"]
+        root.setAttribute("data-theme", isDark ? "dark" : "light");
 
-// Hero name: split into words and letters for the rise-in
-const h1 = document.getElementById('name');
-let n = 0;
-h1.innerHTML = h1.textContent.split(' ').map(w =>
-    `<span class="w" aria-hidden="true">${[...w].map(c => `<span class="c" style="--i:${n++}">${c}</span>`).join('')}</span>`).join(' ');
+        // Update the button text and accessibility label
+        if (themeToggle) {
+            themeToggle.textContent = isDark ? "Light" : "Dark";
 
-// Scroll progress bar
-const bar = document.getElementById('progress');
-// About text lights up word by word as you scroll
-const about = document.getElementById('aboutText');
-about.innerHTML = about.textContent.split(' ').map(w => `<span class="wd">${w}</span>`).join(' ');
-const wds = [...about.querySelectorAll('.wd')];
-function onScroll() {
-    const max = document.documentElement.scrollHeight - innerHeight;
-    bar.style.width = (max > 0 ? scrollY / max * 100 : 0) + '%';
-    const r = about.getBoundingClientRect();
-    const p = Math.min(1, Math.max(0, (innerHeight * .8 - r.top) / (r.height + innerHeight * .3)));
-    wds.forEach((w, i) => w.classList.toggle('lit', i / wds.length < p));
-}
-addEventListener('scroll', onScroll, { passive: true });
-onScroll();
+            themeToggle.setAttribute(
+                "aria-label",
+                isDark ? "Switch to light theme" : "Switch to dark theme"
+            );
 
-// Reveal on scroll
-const rv = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); rv.unobserve(e.target); } }), { threshold: .15 });
-document.querySelectorAll('.reveal').forEach((el, i) => { el.style.transitionDelay = (i % 3) * 90 + 'ms'; rv.observe(el); });
+            themeToggle.setAttribute("aria-pressed", String(isDark));
+        }
 
-// Cursor ring and magnetic buttons (mouse only)
-if (!reduce && matchMedia('(hover: hover)').matches) {
-    const cur = document.getElementById('cursor');
-    let x = 0, y = 0, tx = 0, ty = 0;
-    addEventListener('mousemove', e => { tx = e.clientX; ty = e.clientY; cur.classList.add('on'); });
-    (function loop() { x += (tx - x) * .18; y += (ty - y) * .18; cur.style.transform = `translate(${x}px,${y}px)`; requestAnimationFrame(loop); })();
-    document.querySelectorAll('a,button,.skills li,.row').forEach(el => {
-        el.addEventListener('mouseenter', () => cur.classList.add('big'));
-        el.addEventListener('mouseleave', () => cur.classList.remove('big'));
-    });
-    document.querySelectorAll('.magnetic').forEach(b => {
-        b.addEventListener('mousemove', e => { const r = b.getBoundingClientRect(); b.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * .25}px,${(e.clientY - r.top - r.height / 2) * .35}px)`; });
-        b.addEventListener('mouseleave', () => b.style.transform = '');
-    });
-}
-
-// Highlight current section in nav
-const links = [...navLinks.querySelectorAll('a')];
-const io = new IntersectionObserver(entries => {
-    entries.forEach(en => {
-        if (en.isIntersecting) links.forEach(a => a.classList.toggle('active', a.hash === '#' + en.target.id));
-    });
-}, { rootMargin: '-40% 0px -55% 0px' });
-document.querySelectorAll('main section').forEach(s => io.observe(s));
-
-// Contact form
-const form = document.getElementById('contactForm');
-const status = document.getElementById('formStatus');
-const submitBtn = document.getElementById('submitButton');
-
-form.addEventListener('submit', async e => {
-    e.preventDefault();
-    status.className = '';
-    if (!form.checkValidity()) { status.textContent = 'Fill in your name, a valid email and a message.'; status.className = 'error'; form.reportValidity(); return; }
-    const data = Object.fromEntries(new FormData(form));
-    if (!FORM_ENDPOINT) {
-        location.href = `mailto:${FALLBACK_EMAIL}?subject=${encodeURIComponent('Message from ' + data.name)}&body=${encodeURIComponent(data.message + '\n\n' + data.email)}`;
-        return;
+        // Save the selected theme
+        try {
+            localStorage.setItem("portfolio-theme", isDark ? "dark" : "light");
+        } catch (error) {
+            // Theme switching still works if storage is unavailable.
+        }
     }
-    submitBtn.disabled = true; submitBtn.textContent = 'Sending...';
+
+    // Load the saved theme
+    let savedTheme = "light";
+
     try {
-        const res = await fetch(FORM_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-        if (!res.ok) throw new Error();
-        form.reset(); status.textContent = 'Message sent. I will reply soon.';
-    } catch {
-        status.textContent = `Message not sent. Check your connection and try again, or email ${FALLBACK_EMAIL}.`; status.className = 'error';
-    } finally { submitBtn.disabled = false; submitBtn.textContent = 'Send message'; }
+        savedTheme = localStorage.getItem("portfolio-theme") || "light";
+    } catch (error) {
+        // Use light mode if storage is unavailable.
+    }
+
+    applyTheme(savedTheme);
+
+    // Toggle the theme when clicked
+    if (themeToggle) {
+        themeToggle.addEventListener("click", () => {
+            const currentTheme = root.getAttribute("data-theme");
+            applyTheme(currentTheme === "dark" ? "light" : "dark");
+        });
+    }
+
+
+
+    // ==========================================
+    // 2. MOBILE NAVIGATION MENU
+    // ==========================================
+    const menuButton = document.getElementById("menu");
+    const navLinks = document.getElementById("navLinks");
+
+    function closeMenu() {
+        if (!menuButton || !navLinks) return;
+
+        navLinks.classList.remove("open");
+        menuButton.setAttribute("aria-expanded", "false");
+        menuButton.setAttribute("aria-label", "Open menu");
+        menuButton.textContent = "Menu";
+    }
+
+    if (menuButton && navLinks) {
+        menuButton.addEventListener("click", () => {
+            const isOpen = navLinks.classList.toggle("open");
+
+            menuButton.setAttribute("aria-expanded", String(isOpen));
+            menuButton.setAttribute(
+                "aria-label",
+                isOpen ? "Close menu" : "Open menu"
+            );
+            menuButton.textContent = isOpen ? "Close" : "Menu";
+        });
+
+        navLinks.querySelectorAll("a").forEach((link) => {
+            link.addEventListener("click", closeMenu);
+        });
+
+        document.addEventListener("click", (event) => {
+            if (
+                !navLinks.contains(event.target) &&
+                !menuButton.contains(event.target)
+            ) {
+                closeMenu();
+            }
+        });
+
+        window.addEventListener("resize", () => {
+            if (window.innerWidth > 768) {
+                closeMenu();
+            }
+        });
+    }
+
+
+    // ==========================================
+    // 3. SCROLL PROGRESS BAR
+    // ==========================================
+    const progress = document.getElementById("progress");
+
+    function updateProgress() {
+        if (!progress) return;
+
+        const scrollableHeight =
+            document.documentElement.scrollHeight - window.innerHeight;
+
+        const percentage =
+            scrollableHeight > 0
+                ? (window.scrollY / scrollableHeight) * 100
+                : 0;
+
+        progress.style.width = `${percentage}%`;
+    }
+
+    window.addEventListener("scroll", updateProgress, { passive: true });
+    window.addEventListener("resize", updateProgress);
+    updateProgress();
+
+
+
+    /* ==========================================
+       SCROLL REVEAL ANIMATIONS
+    ========================================== */
+
+    const revealElements = document.querySelectorAll(".reveal");
+
+    if ("IntersectionObserver" in window) {
+        const revealObserver = new IntersectionObserver(
+            (entries, observer) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add("active");
+                        observer.unobserve(entry.target);
+                    }
+                });
+            },
+            {
+                threshold: 0.08,
+                rootMargin: "0px 0px 0px 0px"
+            }
+        );
+
+        revealElements.forEach((element, index) => {
+            element.style.transitionDelay = `${(index % 4) * 100}ms`;
+            revealObserver.observe(element);
+        });
+    } else {
+        // Fallback for browsers without IntersectionObserver
+        revealElements.forEach((element) => {
+            element.classList.add("active");
+        });
+    }
+
+
+
+    /* ==========================================
+       HERO NAME - LETTER-BY-LETTER TYPING
+    ========================================== */
+
+    const heroName = document.getElementById("name");
+
+    if (heroName) {
+        const fullName = "Mohammed Altaf Sabri";
+        const prefersReducedMotion = window.matchMedia(
+            "(prefers-reduced-motion: reduce)"
+        ).matches;
+
+        if (prefersReducedMotion) {
+            heroName.textContent = fullName;
+            heroName.classList.add("name-animated", "typing-complete");
+        } else {
+            heroName.textContent = "";
+            heroName.classList.add("typing-name");
+
+            let index = 0;
+
+            function typeNextLetter() {
+                if (index < fullName.length) {
+                    heroName.textContent += fullName.charAt(index);
+                    index++;
+
+                    setTimeout(typeNextLetter, 100);
+                } else {
+                    heroName.classList.add("typing-complete");
+                    heroName.classList.remove("typing-name");
+                }
+            }
+
+            // Short delay before typing begins
+            setTimeout(typeNextLetter, 400);
+        }
+    }
+
+
+    /* ==========================================
+       ABOUT TEXT - WORD-BY-WORD ANIMATION
+    ========================================== */
+
+    const aboutText = document.getElementById("aboutText");
+
+    if (aboutText) {
+        const originalText = aboutText.textContent.trim();
+        const reducedMotion = window.matchMedia(
+            "(prefers-reduced-motion: reduce)"
+        ).matches;
+
+        if (reducedMotion) {
+            aboutText.textContent = originalText;
+            aboutText.classList.add("text-visible");
+        } else {
+            const words = originalText.split(/\s+/);
+
+            aboutText.replaceChildren();
+
+            words.forEach((word, index) => {
+                const span = document.createElement("span");
+
+                span.className = "about-word";
+                span.textContent = word;
+                span.style.transitionDelay = `${index * 35}ms`;
+
+                aboutText.appendChild(span);
+                aboutText.appendChild(document.createTextNode(" "));
+            });
+
+            if ("IntersectionObserver" in window) {
+                const aboutObserver = new IntersectionObserver(
+                    (entries, observer) => {
+                        entries.forEach((entry) => {
+                            if (entry.isIntersecting) {
+                                aboutText.classList.add("text-visible");
+                                observer.unobserve(entry.target);
+                            }
+                        });
+                    },
+                    { threshold: 0.15 }
+                );
+
+                aboutObserver.observe(aboutText);
+            } else {
+                aboutText.classList.add("text-visible");
+            }
+        }
+    }
+
+
+
+    // ==========================================
+    // 7. ACTIVE NAVIGATION LINK
+    // ==========================================
+    const sections = document.querySelectorAll(
+        "main section[id]"
+    );
+
+    const sectionLinks = document.querySelectorAll(
+        '#navLinks a[href^="#"]'
+    );
+
+    if ("IntersectionObserver" in window && sections.length) {
+        const sectionObserver = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (!entry.isIntersecting) return;
+
+                    sectionLinks.forEach((link) => {
+                        const isCurrent =
+                            link.getAttribute("href") ===
+                            `#${entry.target.id}`;
+
+                        link.classList.toggle("active", isCurrent);
+
+                        if (isCurrent) {
+                            link.setAttribute("aria-current", "location");
+                        } else {
+                            link.removeAttribute("aria-current");
+                        }
+                    });
+                });
+            },
+            {
+                rootMargin: "-35% 0px -55% 0px",
+                threshold: 0
+            }
+        );
+
+        sections.forEach((section) => {
+            sectionObserver.observe(section);
+        });
+    }
+
+
+
+    /* ==========================================
+       BUTTON HOVER EFFECT
+    ========================================== */
+
+    const magneticButtons = document.querySelectorAll(".magnetic");
+
+    magneticButtons.forEach((button) => {
+        button.addEventListener("pointermove", (event) => {
+            // Avoid magnetic movement on touch devices
+            if (event.pointerType === "touch") return;
+
+            const rect = button.getBoundingClientRect();
+
+            const x = event.clientX - rect.left - rect.width / 2;
+            const y = event.clientY - rect.top - rect.height / 2;
+
+            button.style.transform =
+                `translate(${x * 0.10}px, ${y * 0.10}px)`;
+        });
+
+        button.addEventListener("pointerleave", () => {
+            button.style.transform = "";
+        });
+    });
+
+
+    // ==========================================
+    // 9. CUSTOM CURSOR
+    // ==========================================
+
+    const cursorDot = document.getElementById("cursorDot");
+    const cursorOutline = document.getElementById("cursorOutline");
+
+    if (
+        cursorDot &&
+        cursorOutline &&
+        window.matchMedia("(hover: hover) and (pointer: fine)").matches
+    ) {
+        document.body.classList.add("custom-cursor-active");
+
+        let mouseX = 0;
+        let mouseY = 0;
+
+        document.addEventListener("mousemove", (event) => {
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+
+            cursorDot.style.left = `${mouseX}px`;
+            cursorDot.style.top = `${mouseY}px`;
+            cursorDot.style.opacity = "1";
+
+            cursorOutline.style.left = `${mouseX}px`;
+            cursorOutline.style.top = `${mouseY}px`;
+            cursorOutline.style.opacity = "1";
+        });
+
+        document.addEventListener("mouseleave", () => {
+            cursorDot.style.opacity = "0";
+            cursorOutline.style.opacity = "0";
+        });
+
+        document.addEventListener("mouseenter", () => {
+            cursorDot.style.opacity = "1";
+            cursorOutline.style.opacity = "1";
+        });
+
+        document.querySelectorAll("a, button, .btn").forEach((element) => {
+            element.addEventListener("mouseenter", () => {
+                cursorOutline.classList.add("cursor-hover");
+            });
+
+            element.addEventListener("mouseleave", () => {
+                cursorOutline.classList.remove("cursor-hover");
+            });
+        });
+    }
+
+    // ==========================================
+    // 10. CONTACT FORM VALIDATION
+    // No database or backend is used.
+    // ==========================================
+    const contactForm = document.getElementById("contactForm");
+    const formStatus = document.getElementById("formStatus");
+    const submitButton = document.getElementById("submitButton");
+
+    if (contactForm) {
+        contactForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+
+            const nameInput = contactForm.querySelector(
+                '[name="name"]'
+            );
+            const emailInput = contactForm.querySelector(
+                '[name="email"]'
+            );
+            const messageInput = contactForm.querySelector(
+                '[name="message"]'
+            );
+
+            const name = nameInput.value.trim();
+            const email = emailInput.value.trim();
+            const message = messageInput.value.trim();
+
+            if (!name || !email || !message) {
+                showFormStatus(
+                    "Please fill in all fields.",
+                    false
+                );
+                return;
+            }
+
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+            if (!emailPattern.test(email)) {
+                showFormStatus(
+                    "Please enter a valid email address.",
+                    false
+                );
+                emailInput.focus();
+                return;
+            }
+
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = "Opening email...";
+            }
+
+            // Open the visitor's default email application.
+            // This does not save messages in a database.
+            const recipient = "mohdaltafsabri@gmail.com";
+            const subject = encodeURIComponent(
+                `Portfolio contact from ${name}`
+            );
+            const bodyText = encodeURIComponent(
+                `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`
+            );
+
+            showFormStatus(
+                "Opening your email application. Please send the email there.",
+                true
+            );
+
+            window.location.href =
+                `mailto:${recipient}?subject=${subject}&body=${bodyText}`;
+
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = "Send message";
+            }
+        });
+    }
+
+    function showFormStatus(message, success) {
+        if (!formStatus) return;
+
+        formStatus.textContent = message;
+        formStatus.classList.toggle("success", success);
+        formStatus.classList.toggle("error", !success);
+    }
+
+
+    // ==========================================
+    // 11. SMOOTH SECTION NAVIGATION
+    // ==========================================
+    const smoothSectionLinks = document.querySelectorAll(
+        '#navLinks a[href^="#"], a[href^="#"]'
+    );
+
+    smoothSectionLinks.forEach((link) => {
+        link.addEventListener("click", (event) => {
+            const targetId = link.getAttribute("href");
+
+            if (!targetId || targetId === "#") return;
+
+            const targetSection = document.querySelector(targetId);
+
+            if (!targetSection) return;
+
+            event.preventDefault();
+
+            targetSection.scrollIntoView({
+                behavior: window.matchMedia(
+                    "(prefers-reduced-motion: reduce)"
+                ).matches ? "auto" : "smooth",
+                block: "start"
+            });
+
+            // Close the mobile menu after selecting a section
+            const nav = document.getElementById("navLinks");
+            const menuButton = document.getElementById("menu");
+
+            if (nav) nav.classList.remove("open");
+            if (menuButton) menuButton.setAttribute("aria-expanded", "false");
+        });
+    });
+
 });
