@@ -1,23 +1,52 @@
 :root {
-    --bg: #F6F2FF;
-    --ink: #1A1033;
-    --muted: #5d5575;
-    --rule: #d9d0ee;
-    --accent: #FF4F81;
-    --pop: #5B3DF5;
-    --on-accent: #fff;
+    /* Main Page Background (Airy, soft blue-gray) */
+    --bg: rgba(223, 222, 222, 0.85);
+
+    /* Translucent Surface for Glassmorphism Cards/Sections (Soft pearl with slight transparency) */
+    --surface: rgba(213, 214, 214, 0.388);
+
+    /* Text & Lines */
+    --ink: #1E293B;
+    --muted: #64748B;
+    --rule: rgba(203, 213, 225, 0.6);
+
+    /* Smooth Ocean Accents */
+    --accent: #2563EB;
+    --pop: #0EA5E9;
+    --on-accent: #FFFFFF;
+
+    /* Fonts */
     --display: 'Unbounded', system-ui, sans-serif;
     --body: 'Figtree', system-ui, sans-serif;
 }
 
 :root[data-theme="dark"] {
-    --bg: #150E2A;
-    --ink: #F3EEFF;
-    --muted: #a79fc4;
-    --rule: #2f2450;
-    --accent: #FF7AA2;
-    --pop: #9C8CFF;
-    --on-accent: #150E2A
+    /* Main Page Background (Deep, calm midnight atmosphere) */
+    --bg: #090e17d9;
+
+    /* Translucent Surface for Dark Mode (Celestial navy with slight transparency) */
+    --surface: rgba(51, 56, 66, 0.502);
+
+    /* Text & Lines */
+    --ink: #F1F5F9;
+    --muted: #94A3B8;
+    --rule: rgba(30, 41, 59, 0.6);
+
+    /* Smooth Glowing Accents */
+    --accent: #3B82F6;
+    --pop: #38BDF8;
+    --on-accent: #090E17;
+}
+
+.hero,
+.wide,
+.strip figure {
+    background: var(--surface);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--rule);
+    border-radius: 20px;
+    padding: 2rem;
 }
 
 * {
@@ -472,7 +501,6 @@ footer {
     font-size: .9rem
 }
 
-/* scroll reveal: only when JS is running */
 .js .reveal {
     opacity: 0;
     transform: translateY(32px);
@@ -588,7 +616,6 @@ footer {
     }
 }
 
-/* photos */
 .arch {
     aspect-ratio: 4/5;
     display: flex;
@@ -726,7 +753,6 @@ footer {
     }
 }
 
-/* hero without portrait; about text starts at the left */
 .hero {
     grid-template-columns: 1fr
 }
@@ -744,7 +770,6 @@ h1 {
     max-width: 34ch
 }
 
-/* about: text left, small photo right */
 #about.section {
     grid-template-columns: 1fr minmax(160px, 240px);
     column-gap: 3rem;
@@ -772,7 +797,6 @@ h1 {
     }
 }
 
-/* hero: text left, photo right */
 .hero {
     grid-template-columns: 1.25fr .75fr
 }
@@ -783,7 +807,6 @@ h1 {
     }
 }
 
-/* page scrollbar hidden (scrolling still works) */
 html {
     scrollbar-width: none;
     -ms-overflow-style: none
@@ -794,7 +817,7 @@ body::-webkit-scrollbar {
     display: none
 }
 
-/* gallery strip keeps a slim bar so mouse users can scroll it sideways */
 .strip {
     scrollbar-width: thin;
-    scrollbar-color: var(--accent) transparent}   
+    scrollbar-color: var(--accent) transparent
+}
